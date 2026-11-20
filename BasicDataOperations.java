@@ -1,4 +1,3 @@
-/** Координатор пошуку точного значення та значень, більших за поріг. */
 public class BasicDataOperations {
     static final String PATH_TO_DATA_FILE = "list/int.data";
     static final String SORTED_FILE_PREFIX = "list/int.sorted";
