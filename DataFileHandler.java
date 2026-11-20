@@ -1,60 +1,62 @@
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Клас DataFileHandler управляє роботою з файлами даних LocalDateTime.
+ * Клас DataFileHandler управляє роботою з файлами цілих чисел Integer.
  */
 public class DataFileHandler {
     /**
-     * Завантажує масив об'єктів LocalDateTime з файлу.
-     * 
+     * Завантажує масив Integer з файлу в кодуванні UTF-8.
+     * Порожні рядки пропускаються, BOM на початку прибирається.
+     *
      * @param filePath Шлях до файлу з даними.
-     * @return Масив об'єктів LocalDateTime.
+     * @return Масив Integer.
      */
-    public static LocalDateTime[] loadArrayFromFile(String filePath) {
-        DateTimeFormatter timeFormatter = DateTimeFormatter.ISO_DATE_TIME;
-        LocalDateTime[] temporaryArray = new LocalDateTime[1000];
-        int currentIndex = 0;
-
-        try (BufferedReader fileReader = new BufferedReader(new FileReader(filePath))) {
+    public static Integer[] loadArrayFromFile(String filePath) {
+        List<Integer> values = new ArrayList<>();
+        try (BufferedReader fileReader = Files.newBufferedReader(Path.of(filePath), StandardCharsets.UTF_8)) {
             String currentLine;
+            int lineNumber = 0;
             while ((currentLine = fileReader.readLine()) != null) {
-                // Видаляємо можливі невидимі символи та BOM
-                currentLine = currentLine.trim().replaceAll("^\\uFEFF", "");
-                if (!currentLine.isEmpty()) {
-                    LocalDateTime parsedDateTime = LocalDateTime.parse(currentLine, timeFormatter);
-                    temporaryArray[currentIndex++] = parsedDateTime;
+                lineNumber++;
+                // Видаляємо пробіли та можливий BOM на початку файлу
+                currentLine = currentLine.replace("﻿", "").trim();
+                if (currentLine.isEmpty()) {
+                    continue;
+                }
+                try {
+                    values.add(Integer.valueOf(currentLine));
+                } catch (NumberFormatException formatException) {
+                    throw new IOException("Рядок " + lineNumber + " не є цілим числом: '" + currentLine + "'");
                 }
             }
         } catch (IOException ioException) {
-            throw new java.io.UncheckedIOException("Не вдалося прочитати " + filePath, ioException);
+            throw new UncheckedIOException("Не вдалося прочитати " + filePath + ": " + ioException.getMessage(), ioException);
         }
-
-        LocalDateTime[] resultArray = new LocalDateTime[currentIndex];
-        System.arraycopy(temporaryArray, 0, resultArray, 0, currentIndex);
-
-        return resultArray;
+        return values.toArray(new Integer[0]);
     }
 
     /**
-     * Зберігає масив об'єктів LocalDateTime у файл.
-     * 
-     * @param dateTimeArray Масив об'єктів LocalDateTime.
+     * Зберігає масив Integer у файл у кодуванні UTF-8, по одному значенню в рядку.
+     *
+     * @param valueArray Масив Integer.
      * @param filePath Шлях до файлу для збереження.
      */
-    public static void writeArrayToFile(LocalDateTime[] dateTimeArray, String filePath) {
-        try (BufferedWriter fileWriter = new BufferedWriter(new FileWriter(filePath))) {
-            for (LocalDateTime dateTimeElement : dateTimeArray) {
-                fileWriter.write(dateTimeElement.toString());
+    public static void writeArrayToFile(Integer[] valueArray, String filePath) {
+        try (BufferedWriter fileWriter = Files.newBufferedWriter(Path.of(filePath), StandardCharsets.UTF_8)) {
+            for (Integer valueElement : valueArray) {
+                fileWriter.write(valueElement.toString());
                 fileWriter.newLine();
             }
         } catch (IOException ioException) {
-            throw new java.io.UncheckedIOException("Не вдалося записати " + filePath, ioException);
+            throw new UncheckedIOException("Не вдалося записати " + filePath, ioException);
         }
     }
 }
